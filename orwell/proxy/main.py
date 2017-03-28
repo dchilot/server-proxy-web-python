@@ -3,7 +3,6 @@ from __future__ import print_function
 
 
 import argparse
-import logging
 import sys
 import os
 import socket
@@ -139,14 +138,8 @@ class MainHandler(tornado.web.RequestHandler):
         video_url = "/video?address={}&port={}".format(
             message.video_address,
             str(message.video_port))
-        # video_url = "/test?address={}&port={}".format(
-            # message.video_address,
-            # str(message.video_port))
         json_str = json.dumps({"videofeed": video_url})
         OrwellConnection.data_to_send.append(json_str)
-        # for connection in OrwellConnection.all_connections:
-            # print("send videofeed(" + json_str + ") to", connection)
-            # connection.send(json_str)
         print("_handle_welcome - finish")
         self.finish()
 
@@ -224,7 +217,6 @@ class MainHandler(tornado.web.RequestHandler):
                 print("message NOT sent - start_button: " + text)
 
     def _handle_player_state(self, payload):
-        # WIP
         message = pb_server_game.PlayerState()
         message.ParseFromString(payload)
         if (not message.HasField("item")):
@@ -255,6 +247,7 @@ class MainHandler(tornado.web.RequestHandler):
         factor = 0.5
         left = 0
         right = 0
+        sensivity = 0.05
         fire_weapon1 = False
         fire_weapon2 = False
         if ("START" == data):
@@ -282,7 +275,7 @@ class MainHandler(tornado.web.RequestHandler):
             index, _, joystick_type = info.partition(' ')
             index = int(index)
             self._joysticks[index] = orwell.proxy.input.Joystick(
-                0.05,
+                sensivity,
                 joystick_type)
         elif (data.startswith(MainHandler.JOYSTICK_PREFIX)):
             info = data[len(MainHandler.JOYSTICK_PREFIX):]
@@ -325,8 +318,6 @@ class VideoHandler(tornado.web.RequestHandler):
         address = self.get_argument('address')
         port = self.get_argument('port')
         print("address =", address, "; port =", port)
-        # address = "192.168.0.17"
-        # port = 5000
         self.set_header(
             "content-type",
             "multipart/x-mixed-replace; boundary=--ThisRandomString")
@@ -462,6 +453,7 @@ def get_network_ip():
 
 class Broadcast(object):
     def __init__(self, port=9080, retries=5, timeout=10):
+        ip_mask_all = '255'
         self._size = 512
         self._retries = retries
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -471,7 +463,7 @@ class Broadcast(object):
         self._socket.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         broadcast = get_network_ip().split('.')
-        broadcast = '.'.join(broadcast[:-1]) + '.255'
+        broadcast = '.'.join(broadcast[:-1] + [ip_mask_all])
         self._group = (broadcast, port)
         print('group = ' + str(self._group))
         self._received = False
