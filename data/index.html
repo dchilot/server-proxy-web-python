@@ -29,7 +29,10 @@ body {
 	position: absolute;
 	top: 50%;
 	left: 50%;
-	transform: translate(-50%, -150%);
+	transform: translate(-50%, -160%);
+}
+.nowrap {
+	white-space: nowrap;
 }
 .top_middle {
 	position:absolute;
@@ -47,7 +50,6 @@ body {
 	margin-right: 10px;
 	margin-top: 10px;
 	display: inline-block;
-	white-space: nowrap;
 }
 .top_left {
 	position:absolute;
@@ -56,7 +58,6 @@ body {
 	margin-left: 10px;
 	margin-top: 10px;
 	display: inline-block;
-	white-space: nowrap;
 }
 .bottom_right {
 	position:absolute;
@@ -65,7 +66,6 @@ body {
 	margin-right: 10px;
 	margin-bottom: 10px;
 	display: inline-block;
-	white-space: nowrap;
 }
 .bottom_left {
 	position: absolute;
@@ -167,7 +167,7 @@ body {
 	font-family: 'Montserrat', sans-serif;
 }
 .big {
-	color:black;
+	color:white;
 	font-size: 350%;
 	font-family: 'Montserrat', sans-serif;
 }
@@ -198,15 +198,19 @@ body {
 			<div style="position:relative" id="img_container">
 				<image id="videofeed" src="{{ videofeed }}" alt: "Local"  width="100%" style="margin-left:0px;height:auto;"/>
 				<!--<image id="videofeed" src="{{ videofeed }}" alt: "Local"  height="100%" style="margin-left:0px;width:auto;"/>-->
-				<canvas id="canvas_fullscreen" class="top_right transparent clickable" onclick="fullscreen()"></canvas>
+				<canvas id="canvas_fullscreen" class="top_right transparent clickable nowrap" onclick="fullscreen()"></canvas>
 				<div id="flags" class="top_middle">
 					<!--<canvas id="back_pie" class=""/>-->
 					<canvas id="pie" width="100" height="100"/>
 				</div>
-				<div id="end_game" class="centered3 big z3"></div>
-				<div id="end_game_border" class="centered3 big z2 border"></div>
+				<div id="end_game" class="centered3 big z2">
+					<div style="position: relative;">
+						<canvas id="canvas_end_game" class="z2"></canvas>
+						<div id="text_end_game" class="centered z3 nowrap"></div>
+					</div>
+				</div>
 				<button id="start_button" onclick="start()" type="button" class="button_white_on_contour centered">Start</button>
-				<div id="top_left" class="top_left">
+				<div id="top_left" class="top_left nowrap">
 					<div id="top_left_inner" style="position: relative;">
 						<canvas id="canvas_team" class="centered2"></canvas>
 						<div id="team" class="team_name centered2">Team: </div>

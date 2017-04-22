@@ -3,17 +3,19 @@ gLastEvent["KEYBOARD"] = ""
 var gConn = null;
 var gFullScreen = false;
 var gFlagColours = {}
-var gTeam = "A"
+var gTeam = "red"
 var gLastSeconds = 0
 gFlagColours["blue"] = "rgb(10, 81, 255)"
 gFlagColours["green"] = "rgb(3, 232, 107)"
 gFlagColours["yellow"] = "rgb(255, 251, 14)"
 gFlagColours["purple"] = "rgb(224, 16, 232)"
 
-var gFlagRadius = 30;
+var gTeamCircles = new Map()
+
+var gFlagRadius = 27;
 var gClockRadius = 45;
-var gContourThickness = 15;
-var gHorizontalSpace = 5;
+var gContourThickness = 18;
+var gHorizontalSpace = 10;
 var gContourColour = 'rgba(83, 87, 247, 0.5)';
 var gContourColourNoAlpha = 'rgb(83, 87, 247)';
 var gContourMaxHeight_x2 = 2 * (gClockRadius + gContourThickness);
@@ -41,6 +43,11 @@ var gRadarColourBadH = gBatteryColourBadH
 var gBattery = 0;
 var gUltrasound = 0;
 
+var gTeamColors = {
+	"red": 'rgb(240, 60, 60)'
+};
+
+
 String.prototype.replaceAll = function(search, replacement) {
 	var target = this;
 	return target.replace(new RegExp(search, 'g'), replacement);
@@ -50,7 +57,7 @@ $( document ).ready(
 	function()
 	{
 		console.log("document / ready");
-		draw_flag_canvas_team();
+		hide_end_game();
 		draw_battery(gBattery, gUltrasound);
 		draw_canvas_fullscreen();
 		console.log("Pi / 4 = " + (Math.PI / 4));
@@ -62,6 +69,9 @@ $( document ).ready(
 		gConn = new SockJS('//' + window.location.host + '/orwell');
 		console.log("gConn = " + gConn)
 		document.getElementById("team").innerHTML += " " + gTeam;
+		document.getElementById("team").style.color = gTeamColors[gTeam];
+		draw_flag_canvas_team();
+		//draw_end_game("Test", "rgba(12, 12, 250)");
 		gConn.onopen = function() {
 			console.log('Connected.');
 		};
@@ -71,14 +81,22 @@ $( document ).ready(
 			if ("new_items" in obj) {
 				console.log('Received: ' + e.data);
 				var flags = document.getElementById("flags");
+				flags.setAttribute("height", gContourMaxHeight_x2);
 				for (var i = 0; i < obj.new_items.length; i++) {
 					name = obj.new_items[i];
 					var flag_id = "flag_" + name;
 					var flag = document.getElementById(flag_id);
 					if (null == flag) {
 						var colour = gFlagColours[name];
-						var html_flag = "<div width=\"%FLAG_WIDTH%\"><div id=\"%ID%_inner\" style=\"position:relative;top:50%\"><div id=\"%ID%_text_border\" class=\"centered flag_name z2 border\"></div><div id=\"%ID%_text\" class=\"centered flag_name z3\"></div></div><canvas id=\"%ID%_circle\" height=\"%MAX_HEIGHT%\" width=\"%FLAG_WIDTH%\"></canvas></div>".replaceAll("%ID%", flag_id).replace("%COLOUR%", colour).replace("%MAX_HEIGHT%", "" + gContourMaxHeight_x2).replaceAll("%FLAG_WIDTH%", gFlagWidth);
-						console.log("html_flag = " + html_flag);
+						var html_flag = "" +
+							"<div width=\"%FLAG_WIDTH%\" height=\"%MAX_HEIGHT%\">" +
+								"<div id=\"%ID%_inner\" style=\"position:absolute\">" +
+									"<canvas id=\"%ID%_team_circle\" height=\"%MAX_HEIGHT%\" width=\"%FLAG_WIDTH%\"></canvas>" +
+								"</div>" +
+								"<canvas id=\"%ID%_circle\" height=\"%MAX_HEIGHT%\" width=\"%FLAG_WIDTH%\"></canvas>" +
+							"</div>"
+						html_flag = html_flag.replaceAll("%ID%", flag_id).replace("%COLOUR%", colour).replaceAll("%MAX_HEIGHT%", "" + gContourMaxHeight_x2).replaceAll("%FLAG_WIDTH%", gFlagWidth);
+						console.log(flag_id, "html_flag = " + html_flag);
 						flags.innerHTML += html_flag;
 					}
 				}
@@ -89,12 +107,6 @@ $( document ).ready(
 					var flag_id = "flag_" + name;
 					var colour = gFlagColours[name];
 					draw_flag(flag_id + "_circle", colour, is_last);
-					if (is_last) {
-						var flag_inner = document.getElementById(flag_id + "_inner");
-						var new_style = flag_inner.getAttribute('style') + ";left:" + ((gHorizontalSpace - gContourThickness) / 2);
-						console.log("set " + flag_inner.id + " to style = " + new_style);
-						flag_inner.setAttribute('style', new_style);
-					}
 				}
 			}
 			if ("items" in obj) {
@@ -103,14 +115,14 @@ $( document ).ready(
 					identifier = "item " + item.name;
 					var flag_id = "flag_" + item.name;
 					var flag_text_id = flag_id + "_text";
-					var flag_text = document.getElementById(flag_text_id);
+					//var flag_text = document.getElementById(flag_text_id);
+					var flag_text = "";
 					if (null == flag_text) {
 						console.log("Error for item number " + i + " with id '" + flag_text_id + "'.");
 					} else {
 						var circle = document.getElementById(flag_id + "_inner");
-						var flag_text_border = document.getElementById(flag_id + "_text_border");
-						flag_text.innerHTML = item.owner;
-						flag_text_border.innerHTML = item.owner;
+						var team_circle = document.getElementById(flag_id + "_team_circle");
+						draw_team_circle(flag_id + "_team_circle", item.owner);
 						if ("started" == item.capture) {
 							console.log("blink: " + flag_text_id + " ; owner: '" + item.owner + "'");
 							setBlinkOn(circle);
@@ -121,15 +133,21 @@ $( document ).ready(
 				}
 			}
 			if ("winner" in obj) {
+				var end_game_text = "";
+				var colour = "";
 				if (obj.winner == gTeam) {
-					document.getElementById("end_game").innerHTML = "Victory (" + gLastSeconds + "s)";
+					end_game_text = "Victory (" + gLastSeconds + "s)";
+					colour = "rgba(50, 236, 99, 0.5)"
 				} else if (obj.winner == "-") {
-					document.getElementById("end_game").innerHTML = "Draw";
+					end_game_text = "Draw";
+					colour = "rgba(50, 62, 236, 0.5)"
 				} else if (obj.winner == "") {
-					document.getElementById("end_game").innerHTML = "";
+					end_game_text = "";
 				} else {
-					document.getElementById("end_game").innerHTML = "Defeat";
+					end_game_text = "Defeat";
+					colour = "rgba(236, 50, 50, 0.5)"
 				}
+				draw_end_game(end_game_text, colour);
 			}
 			if ("videofeed" in obj) {
 				document.getElementById("videofeed").setAttribute("src", obj.videofeed);
@@ -144,6 +162,7 @@ $( document ).ready(
 				} else {
 					start_button.style.top = '50%';
 				}
+				hide_end_game();
 			}
 			if ("battery" in obj) {
 				update_battery = true;
@@ -336,6 +355,7 @@ function scangamepads() {
 }
 
 function start() {
+	console.log("START");
 	callServer("START")
 }
 
@@ -490,13 +510,41 @@ function draw_flag(name, colour, is_last) {
 	//console.log('done ! draw_flag:', name, radius, margin, vertical_offset, colour, is_last);
 }
 
+function draw_team_circle(circle_name, owner) {
+	var canvas = document.getElementById(circle_name);
+	if (null == canvas) {
+		console.log("Canvas '" + circle_name + "' is null.");
+		return;
+	}
+	if (gTeamCircles.has(circle_name)) {
+		last_owner = gTeamCircles.get(circle_name);
+		if (last_owner == owner) {
+			return;
+		}
+	}
+	gTeamCircles.set(circle_name, owner);
+	//console.log("draw_team_circle", canvas, owner);
+	if ("" != owner) {
+		canvas.style.display = "";
+		var radius = (canvas.width / 2) - 4;
+		var context = canvas.getContext("2d");
+		context.beginPath();
+		context.lineWidth = 5;
+		context.strokeStyle = gTeamColors[owner];
+		context.arc(canvas.width / 2, canvas.height / 2, radius, 0, 2 * Math.PI, false);
+		context.stroke();
+	} else {
+		canvas.style.display = "none";
+	}
+}
+
 function draw_flag_canvas_team() {
 	var canvas = document.getElementById("canvas_team");
 	var team_rect = document.getElementById("team").getBoundingClientRect();
-	console.log("team_rect = " + team_rect);
+	console.log("team_rect = ( width =", team_rect.width, "height =", team_rect.height, ")");
 	var offset = 10;
 	var height = team_rect.height + offset * 2;
-	var width = team_rect.width + 20 + offset * 2;
+	var width = team_rect.width + offset * 2;
 	var top_left = document.getElementById("top_left_inner");
 	// this is horrible
 	top_left.setAttribute(
@@ -834,6 +882,42 @@ function draw_canvas_fullscreen() {
 	context.lineTo(width - space, height - space);
 	context.lineTo(width - space, height - space - length);
 	context.stroke();
+}
+
+function hide_end_game() {
+	var end_game = document.getElementById("end_game");
+	end_game.style.display = "none";
+}
+
+function draw_end_game(end_game_text, colour) {
+	if ("" == colour) {
+		return;
+	}
+	var end_game = document.getElementById("end_game");
+	end_game.style.display = "";
+	var canvas_end_game = document.getElementById("canvas_end_game");
+	var start_button = document.getElementById("start_button");
+	var text_end_game = document.getElementById("text_end_game");
+	text_end_game.innerHTML = end_game_text;
+
+	canvas_end_game.bottom = start_button.top - 10;
+	var text_end_game_rect = document.getElementById("text_end_game").getBoundingClientRect();
+	console.log("text_end_game_rect = ( width =", text_end_game_rect.width, "height =", text_end_game_rect.height, ")");
+	var offset = 10;
+	var height = text_end_game_rect.height + offset * 2;
+	var width = text_end_game_rect.width + offset * 2;
+	canvas_end_game.height = height;
+	canvas_end_game.width = width;
+	height -= offset * 2;
+	width -= offset * 2;
+	var context = canvas_end_game.getContext("2d");
+	context.fillStyle = colour;
+	context.strokeStyle = colour;
+	context.lineJoin = "round";
+	context.lineWidth = offset * 2;
+	context.beginPath();
+	context.strokeRect(offset, offset, width, height);
+	context.fillRect(offset + offset, offset + offset, width - 2 * offset, height - 2 * offset);
 }
 
 window.addEventListener("gamepadconnected", connecthandler);
