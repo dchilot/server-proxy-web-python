@@ -13,7 +13,7 @@ gFlagColours["purple"] = "rgb(224, 16, 232)"
 var gTeamCircles = new Map()
 
 var gFlagRadius = 27;
-var gClockRadius = 45;
+var gClockRadius = 50;
 var gContourThickness = 18;
 var gHorizontalSpace = 10;
 var gContourColour = 'rgba(83, 87, 247, 0.5)';

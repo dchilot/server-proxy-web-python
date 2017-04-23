@@ -228,7 +228,7 @@ class MainHandler(tornado.web.RequestHandler):
             l2 = 1
             div = 2
             ultrasound = math.log(1 + message.ultrasound.distance / div) / l2
-            min_ultrasound = math.log(1 + 0 / div) / l2
+            min_ultrasound = math.log(1 + 5 / div) / l2
             max_ultrasound = math.log(1 + 255 / div) / l2
             range_ultrasound = max_ultrasound - min_ultrasound
             delta = max(0, ultrasound - min_ultrasound)
