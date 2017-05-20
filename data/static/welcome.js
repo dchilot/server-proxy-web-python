@@ -8,6 +8,7 @@ var gLastSeconds = 0
 gFlagColours["blue"] = "rgb(10, 81, 255)"
 gFlagColours["green"] = "rgb(3, 232, 107)"
 gFlagColours["yellow"] = "rgb(255, 251, 14)"
+gFlagColours["orange"] = "rgb(255, 108, 11)"
 gFlagColours["purple"] = "rgb(224, 16, 232)"
 
 var gTeamCircles = new Map()
